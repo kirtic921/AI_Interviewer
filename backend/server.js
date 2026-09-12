@@ -6,8 +6,7 @@ import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 // import userRoutes from "./routes/userRoutes.js";
 // import sessionRoutes from "./routes/sessionRoutes.js";
-// import { notFound, errorHandler } from ".middleware/errorMiddleware.js"
-
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 dotenv.config();
 
 connectDB();
@@ -35,7 +34,7 @@ app.use(cors({
         if (!origin) return callback(null, true)
         if (allowedOrigin.includes(origin)) { callback(null, true)}
         else {
-            if (process.en.NODE_ENV === 'production') {
+            if (process.env.NODE_ENV === 'production') {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
@@ -72,8 +71,8 @@ io.on("connection", (socket)=> {
     });
 });
 
-// app.use(notFound);
-// app.use(errorHandler);
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
