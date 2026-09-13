@@ -76,7 +76,7 @@ const googleLogin=asyncHandler(async(req, res)=>{
         throw new Error("Google login failed");
     }
     
-        const user=await User.findOne({email});
+        let user=await User.findOne({email});
         if(user){
             if(!user.googleId){
                 user.googleId= googleId;
@@ -101,3 +101,19 @@ const googleLogin=asyncHandler(async(req, res)=>{
            
 });
 
+const getUserProfile=asyncHandler(async(req, res, next)=>{
+    if(req.user){
+        res.status(200).json({
+            _id: req.user._id,
+            name: req.user.name,
+            email: req.user.email,
+            preferredRole: req.user.preferredRole,
+        })
+    }
+    else{
+        res.status(404);
+        throw new Error("User not found");
+    }
+})
+
+export { registerUser, loginUser, googleLogin, getUserProfile };
