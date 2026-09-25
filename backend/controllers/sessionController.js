@@ -116,6 +116,35 @@ const deleteSession=ayncHandler(async(req,res)=>{
     res.status(200).json({id:session._id,message:"Session deleted successfully"});
 })
 
+const calculateOverallScore = async (sessionId) => {
+    const results=await Session.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(sessionId)
+            }
+        },
+        {
+            $unwind: "$questions"
+        },
+        {
+            $group:{
+                _id:'$_id',
+                avgTechnical: {$avg:{$cond:[{$eq:['$questions.isEvaluated', true]}, '$questions.technicalScore', 0]}},
+                avgConfidence:{$avg:{$cond:[{$eq:['$questions.isEvaluated', true]}, '$questions.confidenceScore',0]}},            
+            }
+        },
+        {
+            $project: {
+                _id:0,
+                overallScore:{$round:[{$avg:['$avgTechnical','$avgConfidence']}, 0]},
+                avgTechnical: {$round: ["$avgTechnical",0]},
+                avgConfidence: {$round: ["$avgConfidence", 0]}
+            }
+        }
+    ]);
+    return results[0] ||{overallScore:0, avgTechnical:0, avgConfidence:0};
+}
+
 const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=null, codeSubmission=null)=>{
     // let transcription="";
     const questionIndex=typeof questionIdx==="string"?parseInt(questionIdx,10):questionIdx;
@@ -195,7 +224,7 @@ const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=nu
 
 
             if(session.status==="completed" || allQuestionsEvaluated){
-                const scoreSummary=await calculateScoreSummary(sessionId);
+                const scoreSummary=await calculateOverallScore(sessionId);
                 session.overallScore=scoreSummary.overallScore || 0;
                 session.metrics={
                     avgTechnicalScore:scoreSummary.avgTechnicalScore,
@@ -217,7 +246,7 @@ const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=nu
             console.error(`Evaluation failed: ${error.message}`);
             pushSocketUpdate(io,userId, sessionId, "evaluation failed", error.message, session);
         }
-    };
+    }
 }
 
 const submitAnswer=asyncHandler(async(req,res)=>{
@@ -252,6 +281,35 @@ const submitAnswer=asyncHandler(async(req,res)=>{
     evaluateAnswerAsync(io,userId,sessionId,questionIdx, audioFilePath, codeSubmission);
 })
 
+const endSession=asyncHnadler(async(req,res)=>{
+    const userId=req.user._id;
+    const sessionId=req.params.id;
+    const session=await Session.findById(sessionId);
+    if(!session || session.user.toString()!==userId.toString()){
+        res.status(404);
+        throw new Error("Session not found or user unauthorised");
+    }
+    const isProcessing=session.questions.some(q=>q.isSubmitted && !q.isEvaluated);
+    if(isProcessing){
+        res.status(400);
+        throw new Error("Ai is still processing, please wait before ending the session");
+    }
+    if(session.status==="completed"){
+        res.status(400);
+        throw new Error("Session already ended");
+    }
+    const scoreSummary=await calculateOverallScore(SessionId);
+    session.overallScore=scoreSummary.overallScore || 0;
+    session.metrics={
+        avgTechnicalScore:scoreSummary.avgTechnicalScore,
+        avgConfidenceScore:scoreSummary.avgConfidenceScore
+    }
+    session.status="completed";
+    await session.save();
+    const io=req.app.get("io")
+    pushSocketUpdate(io,userId, sessionId, "session_completed", "Interview ended early", session);
+    res.status(200).json({message:"Session ended successfully", session});
+})
 
-export { createSession };
+export { createSession, submitAnswer, endSession, getSessions, getSessionById, deleteSession};
 
