@@ -19,7 +19,7 @@ const pushSocketUpdate=(io,userId,sessionId,status,message,sessionData=null)=>{
 
 const createSession=asyncHnadler(async(req,res)=>{
     const {role, level, interviewType, count}=req.body;
-    userId=req.user._id;
+    const userId=req.user._id;
     if(!role || !level || !interviewType || !count){
         res.status(400);
         throw new Error("Please fill all the fields");
@@ -62,11 +62,11 @@ const createSession=asyncHnadler(async(req,res)=>{
                     throw new Error(`AI service error: ${aiResponse.status}-${errorBody}`);
                 }
                 const aiData=await aiResponse.json();
-                const coudingCount=interviewType==='coding-mix'?Math.floor(count*0.2):0;
+                const codingCount=interviewType==='coding-mix'?Math.floor(count*0.2):0;
 
                 const questions=aiData.questions.map((qText,index)=>({
                     questionText:qText,
-                    questionType:index<coudingCount?"coding":"oral",
+                    questionType:index<codingCount?"coding":"oral",
                     isEvaluated:false,
                     isSubmitted:false
                 }));
@@ -112,7 +112,7 @@ const deleteSession=ayncHandler(async(req,res)=>{
         res.status(404);
         throw new Error("Session not found"); 
     }
-    await session.remove();
+    await session.deleteOne();
     res.status(200).json({id:session._id,message:"Session deleted successfully"});
 })
 
@@ -180,7 +180,7 @@ const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=nu
         }
         catch(error){
             console.error(`Transcription failed: $(error.message)`);
-            pushSocketUpdate(io,userId, sessionId, "failed", error.message);
+            
         }
         finally{
             if(audioFilePath && fs.existsSync(audioFilePath)){
@@ -197,8 +197,8 @@ const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=nu
                     "Content-Type":"application/json"
                 },
                 body:JSON.stringify({
-                    questionText:question.questionText, 
-                    questionType: question.questionType,
+                    question:question.questionText, 
+                    question_Type: question.questionType,
                     role:session.role,    
                     level:session.level,
                     user_answer:transcription,
@@ -227,8 +227,8 @@ const evaluateAnswerAsync=async(io,userId,sessionId,questionIdx,audioFilePath=nu
                 const scoreSummary=await calculateOverallScore(sessionId);
                 session.overallScore=scoreSummary.overallScore || 0;
                 session.metrics={
-                    avgTechnicalScore:scoreSummary.avgTechnicalScore,
-                    avgConfidenceScore:scoreSummary.avgConfidenceScore
+                    avgTechnical:scoreSummary.avgTechnical,
+                    avgConfidence:scoreSummary.avgConfidence
                 };
                 if(allQuestionsEvaluated){
                 session.status="completed";
