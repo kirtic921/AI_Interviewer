@@ -53,7 +53,8 @@ const createSession=asyncHnadler(async(req,res)=>{
                     body:JSON.stringify({
                         role,
                         level,
-                        count
+                        count,
+                        interview_type:interviewType
                     })
                 });
 
