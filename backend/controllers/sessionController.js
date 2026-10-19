@@ -1,4 +1,4 @@
-import asyncHnadler from "express-async-handler";
+import asyncHandler from "express-async-handler";
 import Session from "../models/SessionModel.js";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -17,7 +17,7 @@ const pushSocketUpdate=(io,userId,sessionId,status,message,sessionData=null)=>{
     });
 }
 
-const createSession=asyncHnadler(async(req,res)=>{
+const createSession=asyncHandler(async(req,res)=>{
     const {role, level, interviewType, count}=req.body;
     const userId=req.user._id;
     if(!role || !level || !interviewType || !count){
@@ -105,7 +105,7 @@ const getSessionById=asyncHandler(async(req,res)=>{
     res.status(200).json(session);
 })
 
-const deleteSession=ayncHandler(async(req,res)=>{
+const deleteSession=asyncHandler(async(req,res)=>{
     const userId=req.user._id;
     const sessionId=req.params.id;
     const session=await Session.findOne({user:userId,_id:sessionId});
@@ -282,7 +282,7 @@ const submitAnswer=asyncHandler(async(req,res)=>{
     evaluateAnswerAsync(io,userId,sessionId,questionIdx, audioFilePath, codeSubmission);
 })
 
-const endSession=asyncHnadler(async(req,res)=>{
+const endSession=asyncHandler(async(req,res)=>{
     const userId=req.user._id;
     const sessionId=req.params.id;
     const session=await Session.findById(sessionId);
