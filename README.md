@@ -10,7 +10,7 @@ an AI powered mock interview platform that generates interview questions, accept
 - **AI Service:** Python, FastAPI
 - **LLM:** Ollama (Mistral)
 - **Speech-to-Text:** OpenAI Whisper
-- **Real-Time Communication:** Socket.IO
+- **Real Time Communication:** Socket.IO
 - **Authentication:** JWT
 
 ## Features
