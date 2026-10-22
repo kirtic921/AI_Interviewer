@@ -1,4 +1,5 @@
 import {createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import axios from 'axios'
 
 const API_URL=`${import.meta.env.VITE_API_URL}/sessions/`;
 
@@ -28,6 +29,7 @@ const initialState={
     sessions:[],
     activeSession:null,
     isError:false,
+    isGenerating : false,
     isLoading:false,
     message:''
 }
@@ -99,10 +101,21 @@ export const sessionSlice=createSlice({
     name:'sessions',
     initialState,
     reducers:{
-        reset:(state)=>initialState,
+        reset:(state)=>{
+            state.isError=false;
+            state.message=' ';
+            state.isLoading=false;
+            state.isGenerating=false;
+        },
         socketUpdateSession:(state, action)=>{
             const {sessionId, status, message, session,}=action.payload;
             state.message=message;
+            if (
+                status==='QUESTIONS_READY' ||
+                status ==='GENERATION_FAILED'
+            ) {
+                state.isGenerating=false;
+            }
             if(!session && state.activeSession && state.activeSession._id===sessionId){
                 const qMatch=message.match(/Q(\d+)/);
                 if(qMatch){
@@ -112,6 +125,7 @@ export const sessionSlice=createSlice({
                     }
                 }
             }
+            
             if(session){
                 if(state.activeSession && state.activeSession._id===sessionId){
                     state.activeSession=session;
@@ -136,7 +150,7 @@ export const sessionSlice=createSlice({
         })
         .addCase(getSessions.fulfilled, (state,action)=>{
             state.isLoading=false;
-            state.isSuccess=true;
+            
             state.sessions=action.payload;
         })
         .addCase(getSessions.rejected, (state,action)=>{
@@ -160,11 +174,6 @@ export const sessionSlice=createSlice({
         })
         .addCase(getSessionById.fulfilled, (state, action)=>{
             state.activeSession=action.payload;
-        })
-        .addCase(deleteSession.fulfilled, (state, action)=>{
-            state.isLoading=false;
-            state.message=action.payload;
-            state.sessions=state.sessions.filter(s=>s._id !== action.payload);
         })
         .addCase(deleteSession.fulfilled, (state, action)=>{
             state.isLoading=false;

@@ -64,42 +64,95 @@ const loginUser=asyncHandler(async(req, res)=>{
     }
 }); 
 
-const googleLogin=asyncHandler(async(req, res)=>{
-    const {tokenId}=req.body;
-    const ticket=await client.verifyIdToken({
-        idToken: tokenId,
+
+const googleLogin = asyncHandler(async (req, res) => {
+    // 1. Receive the token sent by authSlice.js
+    const { token } = req.body;
+
+    if (!token) {
+        res.status(400);
+        throw new Error("Google ID token is required");
+    }
+
+    // 2. Verify the Google ID token
+    const ticket = await client.verifyIdToken({
+        idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const {email_verified, email, name, sub:googleId} = ticket.getPayload();
-    if(!email_verified){
-        res.status(400);
-        throw new Error("Google login failed");
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email || !payload.email_verified) {
+        res.status(401);
+        throw new Error("Google login failed: email not verified");
     }
-    
-        let user=await User.findOne({email});
-        if(user){
-            if(!user.googleId){
-                user.googleId= googleId;
-                await user.save();
-            }
-        }else{
-            user=await User.create({
-                name,
-                email,
-                googleId,
-                password: null
-            });
+
+    const { email, name, sub: googleId } = payload;
+
+    // 3. Find an existing account or create a new one
+    let user = await User.findOne({ email });
+
+    if (user) {
+        // Link the Google account if this user has no Google ID yet
+        if (!user.googleId) {
+            user.googleId = googleId;
+            await user.save();
         }
-            
-                res.status(201).json({ 
-                _id: newUser._id,
-                name: newUser.name,
-                email: newUser.email,
-                preferredRole: newUser.preferredRole,
-                token: generateToken(newUser._id),  
-                });
-           
+    } else {
+        user = await User.create({
+            name,
+            email,
+            googleId,
+        });
+    }
+
+    // 4. Return the authenticated user and your app's JWT
+    res.status(200).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        preferredRole: user.preferredRole,
+        token: generateToken(user._id),
+    });
 });
+
+
+// const googleLogin=asyncHandler(async(req, res)=>{
+//     const {tokenId}=req.body;
+//     const ticket=await client.verifyIdToken({
+//         idToken: tokenId,
+//         audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+//     const {email_verified, email, name, sub:googleId} = ticket.getPayload();
+//     if(!email_verified){
+//         res.status(400);
+//         throw new Error("Google login failed");
+//     }
+    
+//         let user=await User.findOne({email});
+//         if(user){
+//             if(!user.googleId){
+//                 user.googleId= googleId;
+//                 await user.save();
+//             }
+//         }else{
+//             user=await User.create({
+//                 name,
+//                 email,
+//                 googleId,
+//                 password: null
+//             });
+//         }
+            
+//                 res.status(201).json({ 
+//                 _id: newUser._id,
+//                 name: newUser.name,
+//                 email: newUser.email,
+//                 preferredRole: newUser.preferredRole,
+//                 token: generateToken(newUser._id),  
+//                 });
+           
+// });
 
 const getUserProfile=asyncHandler(async(req, res, next)=>{
     if(req.user){

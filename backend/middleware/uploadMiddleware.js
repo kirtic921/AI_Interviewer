@@ -27,5 +27,5 @@ const upload = multer({
     limits: {fileSize:1024*1024*10},
 });
 
-const uploadSingleAudio=upload.single("audio");
+const uploadSingleAudio=upload.single("audioFile");
 export { uploadSingleAudio };
