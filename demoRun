@@ -3,3 +3,11 @@ cd frontend - npm run dev
 cd backend - npm run dev
 cd ai-service - python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ollama run mistral
+conditions (tabs): 
+mongodb cluster functional
+clients-google o-auth in google cloud console
+ollama setup modest
+ports: 
+ai-service : http://127.0.0.1:8000
+backend: port 5000
+frontend:  http://localhost:5173/
