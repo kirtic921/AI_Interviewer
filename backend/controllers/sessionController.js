@@ -177,18 +177,34 @@ const evaluateAnswerAsync = async (io, userId, sessionId, questionIndex, audioFi
     if (audioFilePath) {
         try {
             pushSocketUpdate(io, userId, sessionId, 'AI_TRANSCRIBING', `Transcribing audio for Q${questionIdx + 1}...`);
+            console.log('[AUDIO DEBUG] Starting transcription');
+            console.log('[AUDIO DEBUG] File path:', audioFilePath);
+            console.log('[AUDIO DEBUG] File exists:', fs.existsSync(audioFilePath));
+            console.log(
+                '[AUDIO DEBUG] File size:',
+                fs.existsSync(audioFilePath)
+                ? fs.statSync(audioFilePath).size
+                : 'FILE MISSING'
+            );
             const formData = new FormData();
             formData.append('file', fs.createReadStream(audioFilePath));
 
+            console.log('[AUDIO DEBUG] Sending file to FastAPI /transcribe');
             const transResponse = await fetch(`${AI_SERVICE_URL}/transcribe`, {
                 method: 'POST',
                 body: formData,
                 headers: formData.getHeaders(),
             });
+            console.log('[AUDIO DEBUG] FastAPI response status:', transResponse.status);
 
             if (!transResponse.ok) throw new Error('Transcription service failed');
 
             const transData = await transResponse.json();
+
+            console.log(
+  '[AUDIO DEBUG] Transcription result:',
+  transData.transcription
+);
             transcription = transData.transcription || "";
         } catch (error) {
             console.error(`Transcription Error: ${error.message}`);
@@ -290,7 +306,10 @@ const submitAnswer = asyncHandler(async (req, res) => {
     // --- NEW UNIFIED LOGIC ---
     let audioFilePath = null;
     if (req.file) {
-        audioFilePath = path.join(process.cwd(), req.file.path);
+        // audioFilePath = path.join(process.cwd(), req.file.path);
+        audioFilePath = req.file.path;
+        console.log('[AUDIO DEBUG] Uploaded file:', audioFilePath);
+        console.log('[AUDIO DEBUG] File exists:', fs.existsSync(audioFilePath));
     }
 
     // We no longer error out if one is missing; 
